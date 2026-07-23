@@ -279,11 +279,11 @@ function Nav({
             className="mt-10 flex flex-col gap-6"
           >
             <a
-              href="mailto:contact@connecteurdigital.fr"
+              href="mailto:hello@lcdstudio.fr"
               onClick={() => setOpen(false)}
               className="font-[var(--font-serif)] text-2xl italic tracking-tight"
             >
-              contact@connecteurdigital.fr
+              hello@lcdstudio.fr
             </a>
             <div className="flex items-center gap-4 text-hairline text-[var(--lcd-dim)]">
               <a
@@ -1192,7 +1192,7 @@ function ProjectModal({
                 </a>
               ) : null}
               <a
-                href="mailto:contact@connecteurdigital.fr"
+                href="mailto:hello@lcdstudio.fr"
                 className="group inline-flex items-center gap-4 border border-[var(--lcd-fg)]/40 px-6 py-4 transition-colors hover:border-[var(--lcd-fg)]"
               >
                 <span className="text-hairline">Un projet similaire ?</span>
@@ -1750,7 +1750,7 @@ function FinalCTA() {
           expérience.
         </h2>
         <a
-          href="mailto:contact@connecteurdigital.fr"
+          href="mailto:hello@lcdstudio.fr"
           className="group inline-flex items-center gap-4 border border-[var(--lcd-fg)]/40 px-8 py-5 transition-colors hover:border-[var(--lcd-fg)]"
         >
           <span className="text-hairline">Prendre rendez-vous</span>
@@ -1807,7 +1807,7 @@ function Footer({
           <FooterCol
             title="Contact"
             links={[
-              { label: "contact@connecteurdigital.fr", href: "mailto:contact@connecteurdigital.fr" },
+              { label: "hello@lcdstudio.fr", href: "mailto:hello@lcdstudio.fr" },
               { label: "0033 6 13 63 09 84", href: "tel:+33613630984" },
               { label: "France", href: "#" },
             ]}
