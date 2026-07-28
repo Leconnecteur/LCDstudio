@@ -1563,7 +1563,7 @@ function ConceptCard({
             transition={{ duration: 1.2, ease: EASE }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          <span className="absolute left-5 top-5 inline-flex items-center gap-2 border border-[var(--lcd-accent)]/60 bg-[var(--lcd-accent)]/10 px-3 py-1 text-hairline text-[var(--lcd-accent)]">
+          <span className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/80 px-3 py-1.5 text-hairline text-white backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--lcd-accent)]" />
             {c.tag}
           </span>
