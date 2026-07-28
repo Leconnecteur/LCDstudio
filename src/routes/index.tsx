@@ -1453,6 +1453,7 @@ const CONCEPTS_FALLBACK = [
 ];
 
 function ConceptLab({ featured = false }: { featured?: boolean } = {}) {
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const { data } = useQuery({
     queryKey: ["concepts"],
     queryFn: async () => {
@@ -1504,17 +1505,12 @@ function ConceptLab({ featured = false }: { featured?: boolean } = {}) {
               ? [<>Les idées</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">en cours d'exploration.</em>]
               : [<>Le laboratoire</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">des idées à venir.</em>]
           }
-          aside={
-            <a href="#" className="text-hairline">
-              voir tous les concepts →
-            </a>
-          }
         />
 
         {items.length > 0 ? (
           <div className="mt-16 grid grid-cols-1 gap-6 md:mt-24 md:grid-cols-2 md:gap-10">
             {items.map((c, i) => (
-              <ConceptCard key={c.title} c={c} index={i} />
+              <ConceptCard key={c.title} c={c} index={i} onOpen={() => setActiveIdx(i)} />
             ))}
           </div>
         ) : (
@@ -1523,11 +1519,23 @@ function ConceptLab({ featured = false }: { featured?: boolean } = {}) {
           </div>
         )}
       </div>
+      <ConceptModal
+        concept={activeIdx !== null ? items[activeIdx] ?? null : null}
+        onClose={() => setActiveIdx(null)}
+      />
     </section>
   );
 }
 
-function ConceptCard({ c, index }: { c: { tag: string; title: string; pitch: string; img: string }; index: number }) {
+function ConceptCard({
+  c,
+  index,
+  onOpen,
+}: {
+  c: { tag: string; title: string; pitch: string; img: string };
+  index: number;
+  onOpen: () => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-15%" });
   return (
@@ -1537,34 +1545,129 @@ function ConceptCard({ c, index }: { c: { tag: string; title: string; pitch: str
       animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
       transition={{ duration: 1, ease: EASE, delay: (index % 2) * 0.15 }}
       className={`group relative flex flex-col overflow-hidden border border-[var(--lcd-line)] bg-[#0a0a0a] ${index % 3 === 1 ? "md:translate-y-16" : ""}`}
-      data-cursor
     >
-      <div className="relative aspect-[16/10] overflow-hidden">
-        <motion.img
-          src={c.img}
-          alt=""
-          loading="lazy"
-          className="h-full w-full object-cover"
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 1.2, ease: EASE }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <span className="absolute left-5 top-5 inline-flex items-center gap-2 border border-[var(--lcd-accent)]/60 bg-[var(--lcd-accent)]/10 px-3 py-1 text-hairline text-[var(--lcd-accent)]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[var(--lcd-accent)]" />
-          {c.tag}
-        </span>
-      </div>
-      <div className="flex flex-1 flex-col gap-6 p-6 md:p-10">
-        <h3 className="font-[var(--font-display)] text-4xl font-medium leading-[0.95] tracking-[-0.02em] md:text-5xl">
-          {c.title}
-        </h3>
-        <p className="max-w-md text-sm text-[var(--lcd-dim)] md:text-base">{c.pitch}</p>
-        <div className="mt-auto flex items-center gap-3 text-hairline">
-          découvrir le concept
-          <ArrowRight className="h-3 w-3" />
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Découvrir le concept ${c.title}`}
+        className="flex flex-1 flex-col text-left"
+        data-cursor
+      >
+        <div className="relative aspect-[16/10] overflow-hidden">
+          <motion.img
+            src={c.img}
+            alt=""
+            loading="lazy"
+            className="h-full w-full object-cover"
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 1.2, ease: EASE }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <span className="absolute left-5 top-5 inline-flex items-center gap-2 border border-[var(--lcd-accent)]/60 bg-[var(--lcd-accent)]/10 px-3 py-1 text-hairline text-[var(--lcd-accent)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--lcd-accent)]" />
+            {c.tag}
+          </span>
         </div>
-      </div>
+        <div className="flex flex-1 flex-col gap-6 p-6 md:p-10">
+          <h3 className="font-[var(--font-display)] text-4xl font-medium leading-[0.95] tracking-[-0.02em] md:text-5xl">
+            {c.title}
+          </h3>
+          <p className="max-w-md text-sm text-[var(--lcd-dim)] md:text-base">{c.pitch}</p>
+          <div className="mt-auto flex items-center gap-3 text-hairline">
+            découvrir le concept
+            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+          </div>
+        </div>
+      </button>
     </motion.article>
+  );
+}
+
+function ConceptModal({
+  concept,
+  onClose,
+}: {
+  concept: { tag: string; title: string; pitch: string; img: string } | null;
+  onClose: () => void;
+}) {
+  const open = concept !== null;
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
+  return (
+    <motion.div
+      initial={false}
+      animate={open ? { opacity: 1, pointerEvents: "auto" } : { opacity: 0, pointerEvents: "none" }}
+      transition={{ duration: 0.5, ease: EASE }}
+      className="fixed inset-0 z-[80] overflow-y-auto bg-[var(--lcd-bg)]"
+      data-lenis-prevent
+      style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}
+    >
+      {concept ? (
+        <>
+          <motion.div
+            initial={{ scale: 1.06 }}
+            animate={open ? { scale: 1 } : { scale: 1.06 }}
+            transition={{ duration: 1, ease: EASE }}
+            className="relative h-[60svh] w-full overflow-hidden"
+          >
+            <img src={concept.img} alt={concept.title} className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[var(--lcd-bg)]" />
+            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-5 py-6 md:px-10 md:py-8">
+              <span className="text-hairline text-[var(--lcd-fg)]/80">
+                <span className="text-[var(--lcd-accent)]">●</span> Concept lab
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-11 items-center gap-3 rounded-full border border-[var(--lcd-fg)]/30 px-5 text-hairline uppercase text-[var(--lcd-fg)]/90 backdrop-blur-sm transition-colors hover:bg-[var(--lcd-fg)]/10"
+              >
+                Fermer
+                <span aria-hidden>✕</span>
+              </button>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 px-5 pb-10 md:px-10 md:pb-14">
+              <div className="text-hairline text-[var(--lcd-dim)]">{concept.tag}</div>
+              <h3 className="mt-4 font-[var(--font-display)] text-[clamp(2.4rem,8vw,7rem)] font-medium leading-[0.92] tracking-[-0.03em]">
+                {concept.title}
+              </h3>
+            </div>
+          </motion.div>
+
+          <div className="mx-auto max-w-3xl px-5 py-16 md:px-10 md:py-24">
+            <p className="max-w-3xl font-[var(--font-serif)] text-2xl italic leading-snug text-[var(--lcd-fg)] md:text-4xl">
+              {concept.pitch}
+            </p>
+            <div className="mt-16 flex flex-wrap items-center gap-4">
+              <a
+                href="mailto:hello@lcdstudio.fr"
+                className="group inline-flex items-center gap-4 border border-[var(--lcd-fg)] bg-[var(--lcd-fg)] px-6 py-4 text-[var(--lcd-bg)] transition-colors hover:bg-transparent hover:text-[var(--lcd-fg)]"
+              >
+                <span className="text-hairline">Discuter de ce concept</span>
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+              </a>
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-hairline text-[var(--lcd-dim)] hover:text-[var(--lcd-fg)]"
+              >
+                ← retour aux concepts
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
+    </motion.div>
   );
 }
 
