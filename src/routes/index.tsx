@@ -287,7 +287,7 @@ function Nav({
             </a>
             <div className="flex items-center gap-4 text-hairline text-[var(--lcd-dim)]">
               <a
-                href="https://www.instagram.com/leconnecteurdigital"
+                href="https://www.instagram.com/lcd_studio_digital"
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => setOpen(false)}
