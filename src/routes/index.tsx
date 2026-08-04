@@ -1903,7 +1903,7 @@ function Footer({
           <FooterCol
             title="Suivez-nous"
             links={[
-              { label: "Instagram", href: "https://www.instagram.com/leconnecteurdigital" },
+              { label: "Instagram", href: "https://www.instagram.com/lcd_studio_digital" },
               { label: "Facebook", href: "https://www.facebook.com/people/Le-Connecteur-Digital/61566337440874/" },
             ]}
           />
