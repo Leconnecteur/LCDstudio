@@ -173,7 +173,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Dashboard({ email }: { email: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"projects" | "concepts" | "cases">("projects");
+  const [tab, setTab] = useState<"leads" | "projects" | "concepts" | "cases">("leads");
 
   const { data: projects = [], isLoading: loadingP } = useQuery({
     queryKey: ["admin-projects"],
@@ -290,7 +290,9 @@ function Dashboard({ email }: { email: string }) {
       <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-[var(--font-display)] text-4xl tracking-tight">
-            {tab === "projects"
+            {tab === "leads"
+              ? "Demandes"
+              : tab === "projects"
               ? "Projets"
               : tab === "concepts"
               ? "Concept Lab"
@@ -299,7 +301,7 @@ function Dashboard({ email }: { email: string }) {
           <p className="mt-2 text-sm text-[var(--lcd-dim)]">Connecté · {email}</p>
         </div>
         <div className="flex gap-3">
-          {tab === "projects" ? (
+          {tab === "leads" ? null : tab === "projects" ? (
             <button
               type="button"
               onClick={() =>
@@ -351,7 +353,7 @@ function Dashboard({ email }: { email: string }) {
 
       {/* Onglets */}
       <div className="mb-8 inline-flex items-center gap-1 rounded-full border border-[var(--lcd-line)] p-1">
-        {(["projects", "concepts", "cases"] as const).map((v) => (
+        {(["leads", "projects", "concepts", "cases"] as const).map((v) => (
           <button
             key={v}
             type="button"
@@ -362,7 +364,9 @@ function Dashboard({ email }: { email: string }) {
                 : "text-[var(--lcd-dim)] hover:text-[var(--lcd-fg)]"
             }`}
           >
-            {v === "projects"
+            {v === "leads"
+              ? "Demandes"
+              : v === "projects"
               ? `Projets (${projects.length})`
               : v === "concepts"
               ? `Concepts (${concepts.length})`
@@ -371,7 +375,9 @@ function Dashboard({ email }: { email: string }) {
         ))}
       </div>
 
-      {tab === "projects" ? (
+      {tab === "leads" ? (
+        <LeadsPanel />
+      ) : tab === "projects" ? (
         loadingP ? (
         <p className="text-[var(--lcd-dim)]">Chargement…</p>
       ) : (
@@ -540,6 +546,103 @@ function Dashboard({ email }: { email: string }) {
         />
       ) : null}
     </Shell>
+  );
+}
+
+type LeadRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  project_type: "film" | "artiste" | "autre";
+  release_date: string | null;
+  budget: string | null;
+  message: string | null;
+  source: string | null;
+  status: "nouveau" | "contacté" | "gagné" | "perdu";
+  created_at: string;
+};
+
+const LEAD_STATUSES: LeadRow["status"][] = ["nouveau", "contacté", "gagné", "perdu"];
+const LEAD_TYPE_LABEL: Record<LeadRow["project_type"], string> = {
+  film: "Film",
+  artiste: "Artiste",
+  autre: "Autre",
+};
+
+function LeadsPanel() {
+  const qc = useQueryClient();
+  const { data: leads = [], isLoading, error } = useQuery({
+    queryKey: ["admin-leads"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("leads")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as LeadRow[];
+    },
+  });
+  const setStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: LeadRow["status"] }) => {
+      const { error } = await (supabase as any).from("leads").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-leads"] }),
+  });
+
+  if (isLoading) return <p className="text-[var(--lcd-dim)]">Chargement…</p>;
+  if (error) {
+    return (
+      <p className="text-sm text-[var(--lcd-accent)]">
+        Impossible de charger les demandes. La table « leads » doit être créée (migration
+        supabase/migrations/20260928120000_create_leads.sql).
+      </p>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-[var(--lcd-line)] border-y border-[var(--lcd-line)]">
+      {leads.length === 0 ? (
+        <li className="py-10 text-center text-sm text-[var(--lcd-dim)]">
+          Aucune demande pour l'instant. Les briefs envoyés depuis le site apparaîtront ici.
+        </li>
+      ) : null}
+      {leads.map((l) => (
+        <li key={l.id} className="flex flex-col gap-3 py-5 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-[var(--font-display)] text-xl">{l.name}</span>
+              <span className="text-hairline text-[var(--lcd-accent)]">{LEAD_TYPE_LABEL[l.project_type]}</span>
+              {l.company ? <span className="text-sm text-[var(--lcd-fg)]/80">{l.company}</span> : null}
+              <span className="text-hairline text-[var(--lcd-dim)]">
+                {new Date(l.created_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
+              </span>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-4 text-sm text-[var(--lcd-dim)]">
+              <a href={`mailto:${l.email}`} className="underline">{l.email}</a>
+              {l.phone ? <a href={`tel:${l.phone}`} className="underline">{l.phone}</a> : null}
+              {l.release_date ? <span>Sortie : {l.release_date}</span> : null}
+              {l.budget ? <span>Budget : {l.budget}</span> : null}
+              {l.source ? <span>Source : {l.source}</span> : null}
+            </div>
+            {l.message ? (
+              <p className="mt-3 whitespace-pre-line text-sm text-[var(--lcd-fg)]/85">{l.message}</p>
+            ) : null}
+          </div>
+          <select
+            value={l.status}
+            onChange={(e) => setStatus.mutate({ id: l.id, status: e.target.value as LeadRow["status"] })}
+            className="border border-[var(--lcd-line)] bg-[var(--lcd-bg)] px-3 py-2 text-hairline uppercase text-[var(--lcd-fg)]"
+          >
+            {LEAD_STATUSES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { absoluteUrl, breadcrumbJsonLd, ldJson, ORGANIZATION_ID, seo } from "@/lib/seo";
 
 type CaseStudy = {
   id: string;
@@ -25,29 +26,65 @@ type CaseStudy = {
   published: boolean;
 };
 
+async function fetchCaseStudy(slug: string) {
+  const { data, error } = await (supabase as any)
+    .from("case_studies")
+    .select("*")
+    .eq("slug", slug)
+    .eq("published", true)
+    .maybeSingle();
+  if (error) throw error;
+  return data as CaseStudy | null;
+}
+
+function caseDescription(cs: CaseStudy) {
+  const raw = [cs.tagline?.replace(/^[«"]\s*|\s*[»"]$/g, ""), cs.context]
+    .map((t) => t?.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join(" — ");
+  const text = raw || `Étude de cas LCD Studio pour ${cs.client} : contexte, défi, idée et exécution.`;
+  return text.length > 158 ? `${text.slice(0, 155).trimEnd()}…` : text;
+}
+
 export const Route = createFileRoute("/etudes/$slug")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `Étude de cas — ${params.slug} · LCD` },
-      {
-        name: "description",
-        content:
-          "Une étude de cas LCD : contexte, défi, idée et exécution. Le parcours créatif derrière un projet livré.",
-      },
-      { property: "og:title", content: `Étude de cas — ${params.slug} · LCD` },
-      {
-        property: "og:url",
-        content: `https://connecteurdigital.lovable.app/etudes/${params.slug}`,
-      },
-      { property: "og:type", content: "article" },
-    ],
-    links: [
-      {
-        rel: "canonical",
-        href: `https://connecteurdigital.lovable.app/etudes/${params.slug}`,
-      },
-    ],
-  }),
+  loader: async ({ params }) => {
+    const cs = await fetchCaseStudy(params.slug);
+    if (!cs) throw notFound();
+    return cs;
+  },
+  head: ({ params, loaderData: cs }) => {
+    const path = `/etudes/${params.slug}`;
+    if (!cs) return { meta: [{ title: "Étude introuvable · LCD Studio" }, { name: "robots", content: "noindex" }] };
+    const title = `${cs.title} — Étude de cas ${cs.client} · LCD Studio`;
+    const description = caseDescription(cs);
+    const image = cs.cover_url ?? cs.backdrop_url ?? undefined;
+    const { meta, links } = seo({ title, description, path, image, type: "article" });
+    return {
+      meta,
+      links,
+      scripts: [
+        ldJson({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: cs.title,
+          description,
+          image: image ? [image] : undefined,
+          inLanguage: "fr-FR",
+          url: absoluteUrl(path),
+          author: { "@id": ORGANIZATION_ID },
+          publisher: { "@id": ORGANIZATION_ID },
+          about: { "@type": "Organization", name: cs.client },
+        }),
+        ldJson(
+          breadcrumbJsonLd([
+            { name: "Accueil", path: "/" },
+            { name: "Études de cas", path: "/#etudes" },
+            { name: cs.title, path },
+          ]),
+        ),
+      ],
+    };
+  },
   component: CaseStudyPage,
   errorComponent: ({ reset }) => {
     const router = useRouter();
@@ -84,32 +121,16 @@ export const Route = createFileRoute("/etudes/$slug")({
 
 function CaseStudyPage() {
   const { slug } = Route.useParams();
-  const { data, isLoading, error } = useQuery({
+  const { data } = useQuery({
     queryKey: ["case-study", slug],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("case_studies")
-        .select("*")
-        .eq("slug", slug)
-        .eq("published", true)
-        .maybeSingle();
-      if (error) throw error;
-      return data as CaseStudy | null;
-    },
+    queryFn: () => fetchCaseStudy(slug),
+    initialData: Route.useLoaderData(),
   });
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [slug]);
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--lcd-bg)] text-[var(--lcd-fg)]">
-        <p className="text-hairline text-[var(--lcd-dim)]">Chargement…</p>
-      </div>
-    );
-  }
-  if (error) throw error;
   if (!data) throw notFound();
 
   const cs = data;

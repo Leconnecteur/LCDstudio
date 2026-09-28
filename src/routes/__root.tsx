@@ -77,24 +77,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "LCD — Studio d'expériences digitales pour le cinéma et la culture" },
+      { title: "LCD — Sites de sortie de films & sites d'artistes" },
       {
         name: "description",
         content:
-          "LCD imagine des expériences digitales sur mesure pour les films, les artistes, les sportifs et les grands événements. Un studio créatif haut de gamme.",
+          "Studio digital pour le cinéma et la musique : sites de sortie de films, sites officiels d'artistes et expériences interactives. Références : Kev Adams, Apollo Films.",
       },
       { name: "author", content: "LCD Studio" },
       { property: "og:site_name", content: "LCD" },
-      { property: "og:title", content: "LCD — Studio d'expériences digitales pour le cinéma et la culture" },
+      { property: "og:title", content: "LCD — Sites de sortie de films & sites d'artistes" },
       {
         property: "og:description",
         content:
-          "LCD imagine des expériences digitales sur mesure pour les films, les artistes, les sportifs et les grands événements. Un studio créatif haut de gamme.",
+          "Studio digital pour le cinéma et la musique : sites de sortie de films, sites officiels d'artistes et expériences interactives. Références : Kev Adams, Apollo Films.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "LCD — Studio d'expériences digitales pour le cinéma et la culture" },
-      { name: "twitter:description", content: "LCD imagine des expériences digitales sur mesure pour les films, les artistes, les sportifs et les grands événements. Un studio créatif haut de gamme." },
+      { name: "twitter:title", content: "LCD — Sites de sortie de films & sites d'artistes" },
+      { name: "twitter:description", content: "Studio digital pour le cinéma et la musique : sites de sortie de films, sites officiels d'artistes et expériences interactives. Références : Kev Adams, Apollo Films." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a127f640-9b65-495e-aec7-6829d181d0d8" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a127f640-9b65-495e-aec7-6829d181d0d8" },
     ],
@@ -125,7 +125,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <head>
         <HeadContent />
       </head>

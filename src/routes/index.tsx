@@ -9,6 +9,17 @@ import type { Database } from "@/integrations/supabase/types";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { CustomCursor } from "@/components/CustomCursor";
 import { Loader } from "@/components/Loader";
+import { BriefForm } from "@/components/BriefForm";
+import { CONTACT_EMAIL, CONTACT_PHONE_LABEL, selectBriefType, whatsappUrl } from "@/lib/contact";
+import { LANDINGS } from "@/lib/landings";
+import {
+  ldJson,
+  ORGANIZATION_ID,
+  organizationJsonLd,
+  seo,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 
 import heroImg from "@/assets/hero.jpg";
 import heroVideoMp4 from "@/assets/hero-cinema-browser.mp4";
@@ -21,78 +32,101 @@ import geremyPortrait from "@/assets/geremy-portrait.jpg";
 import rawImg from "@/assets/project-raw.jpg";
 import padelImg from "@/assets/project-padel.jpg";
 import ctaImg from "@/assets/cta.jpg";
-import eventImg from "@/assets/cat-event.jpg";
-import tvImg from "@/assets/tv-experience.jpg";
 import missionImg from "@/assets/concept-mission.jpg";
 import cannesImg from "@/assets/concept-cannes.jpg";
 import rolandImg from "@/assets/concept-roland.jpg";
 import tourImg from "@/assets/concept-tour.jpg";
 // import portraitAsset from "@/assets/geremy-portrait.jpg.asset.json";
 
+const HOME_TITLE = "LCD Studio — Création de sites pour films & artistes";
+const HOME_DESCRIPTION =
+  "Studio digital pour le cinéma et la musique : sites de sortie de films, sites officiels d'artistes et d'humoristes, expériences interactives. Références : Kev Adams, Apollo Films.";
+
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "LCD — Studio d'expériences digitales pour le cinéma et la culture" },
-      {
-        name: "description",
-        content:
-          "LCD imagine des expériences digitales sur mesure pour les films, les artistes, les sportifs et les grands événements. Un studio créatif haut de gamme.",
-      },
-      {
-        property: "og:title",
-        content: "LCD — Studio d'expériences digitales pour le cinéma et la culture",
-      },
-      {
-        property: "og:description",
-        content:
-          "LCD imagine des expériences digitales sur mesure pour les films, les artistes, les sportifs et les grands événements. Un studio créatif haut de gamme.",
-      },
-    ],
-  }),
+  loader: async () => {
+    const [projects, concepts, cases] = await Promise.all([
+      fetchProjects().catch(() => [] as DbProject[]),
+      fetchConcepts().catch(() => [] as DbConcept[]),
+      fetchCasePreviews().catch(() => [] as CasePreview[]),
+    ]);
+    return { projects, concepts, cases };
+  },
+  head: () => {
+    const { meta, links } = seo({ title: HOME_TITLE, description: HOME_DESCRIPTION, path: "/" });
+    return {
+      meta,
+      links,
+      scripts: [
+        ldJson(organizationJsonLd),
+        ldJson({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: SITE_NAME,
+          url: SITE_URL,
+          inLanguage: "fr-FR",
+          publisher: { "@id": ORGANIZATION_ID },
+        }),
+      ],
+    };
+  },
   component: Home,
 });
 
 const EASE = [0.2, 0.8, 0.2, 1] as const;
 
+async function fetchProjects() {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data as DbProject[];
+}
+
+async function fetchConcepts() {
+  const { data, error } = await (supabase as any)
+    .from("concepts")
+    .select("*")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as DbConcept[];
+}
+
+async function fetchCasePreviews() {
+  const { data, error } = await (supabase as any)
+    .from("case_studies")
+    .select("id,slug,client,title,tagline,cover_url,release_label")
+    .eq("published", true)
+    .order("sort_order", { ascending: true })
+    .limit(6);
+  if (error) throw error;
+  return (data ?? []) as CasePreview[];
+}
+
+function useProjects() {
+  const initialData = Route.useLoaderData().projects;
+  return useQuery({ queryKey: ["projects"], queryFn: fetchProjects, initialData });
+}
+
+function useConcepts() {
+  const initialData = Route.useLoaderData().concepts;
+  return useQuery({ queryKey: ["concepts"], queryFn: fetchConcepts, initialData });
+}
+
+function useCasePreviews() {
+  const initialData = Route.useLoaderData().cases;
+  return useQuery({ queryKey: ["case-studies-preview"], queryFn: fetchCasePreviews, initialData });
+}
+
 function Home() {
-  const { data: projectRows = [], isLoading: projectsLoading } = useProjects();
+  const { data: projectRows = [] } = useProjects();
+  const { data: concepts = [] } = useConcepts();
+  const { data: cases = [] } = useCasePreviews();
   const hasProjects = projectRows.length > 0;
-  const { data: conceptCount = 0 } = useQuery({
-    queryKey: ["concepts", "count"],
-    queryFn: async () => {
-      const { count, error } = await (supabase as unknown as {
-        from: (t: string) => {
-          select: (c: string, o: { count: "exact"; head: true }) => {
-            eq: (c: string, v: boolean) => Promise<{ count: number | null; error: Error | null }>;
-          };
-        };
-      })
-        .from("concepts")
-        .select("*", { count: "exact", head: true })
-        .eq("published", true);
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-  const hasConcepts = conceptCount > 0;
-  const { data: caseCount = 0 } = useQuery({
-    queryKey: ["case_studies", "count"],
-    queryFn: async () => {
-      const { count, error } = await (supabase as unknown as {
-        from: (t: string) => {
-          select: (c: string, o: { count: "exact"; head: true }) => {
-            eq: (c: string, v: boolean) => Promise<{ count: number | null; error: Error | null }>;
-          };
-        };
-      })
-        .from("case_studies")
-        .select("*", { count: "exact", head: true })
-        .eq("published", true);
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-  const hasCases = caseCount > 0;
+  const hasConcepts = concepts.length > 0;
+  const hasCases = cases.length > 0;
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[var(--lcd-bg)] text-[var(--lcd-fg)] selection:bg-[var(--lcd-accent)]/40">
       <SmoothScroll />
@@ -101,24 +135,13 @@ function Home() {
       <Nav hasProjects={hasProjects} hasConcepts={hasConcepts} hasCases={hasCases} />
       <main>
         <Hero />
-        <Studio />
         <Clients />
-        {hasProjects ? (
-          <>
-            <Featured />
-            <WhatWeCreate />
-            <CaseStudiesPreview />
-            <Approach />
-            <ConceptLab />
-          </>
-        ) : (
-          <>
-            <ConceptLab featured />
-            <WhatWeCreate />
-            <Approach />
-            <CaseStudiesPreview />
-          </>
-        )}
+        <Offers />
+        {hasProjects ? <Featured /> : null}
+        <CaseStudiesPreview />
+        <Approach />
+        <Studio />
+        <ConceptLab />
         <PullQuote />
         <FinalCTA />
       </main>
@@ -148,26 +171,18 @@ function Nav({
     };
   }, [open]);
 
-  const linksRaw = (
-    hasProjects
-      ? [
-          ["Projets", "#projets"],
-          ["Études de cas", "#etudes"],
-          ["Approche", "#approche"],
-          ["Concepts", "#concepts"],
-          ["Studio", "#studio"],
-          ["Contact", "#contact"],
-        ]
-      : [
-          ["Concepts", "#concepts"],
-          ["Approche", "#approche"],
-          ["Études de cas", "#etudes"],
-          ["Studio", "#studio"],
-          ["Contact", "#contact"],
-        ]
-  ) as ReadonlyArray<readonly [string, string]>;
+  const linksRaw = [
+    ["Offres", "#offres"],
+    ["Projets", "#projets"],
+    ["Études de cas", "#etudes"],
+    ["Studio", "#studio"],
+    ["Contact", "#contact"],
+  ] as ReadonlyArray<readonly [string, string]>;
   const links = linksRaw.filter(
-    ([, h]) => (hasConcepts || h !== "#concepts") && (hasCases || h !== "#etudes"),
+    ([, h]) =>
+      (hasProjects || h !== "#projets") &&
+      (hasConcepts || h !== "#concepts") &&
+      (hasCases || h !== "#etudes"),
   );
 
   return (
@@ -240,7 +255,7 @@ function Nav({
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--lcd-accent)]" />
               Menu
             </span>
-            <span>05 / 05</span>
+            <span>{String(links.length).padStart(2, "0")} / {String(links.length).padStart(2, "0")}</span>
           </div>
 
           <ul className="mt-8 flex flex-col">
@@ -403,11 +418,6 @@ function Hero() {
   const [soundPromptVisible, setSoundPromptVisible] = useState(false);
   const [heroInView, setHeroInView] = useState(true);
 
-  const isSoundButtonEvent = (event: Event) => {
-    const target = event.target;
-    return target instanceof Element && Boolean(target.closest("[data-sound-toggle]"));
-  };
-
   const cancelFade = useCallback(() => {
     if (fadeFrameRef.current !== null) {
       cancelAnimationFrame(fadeFrameRef.current);
@@ -525,23 +535,6 @@ function Hero() {
   }, [disableSound, isHeroAudibleZone]);
 
   useEffect(() => {
-    const onIntentionalGesture = (event: Event) => {
-      if (isSoundButtonEvent(event)) return;
-      enableSound();
-    };
-    window.addEventListener("pointerup", onIntentionalGesture, { capture: true });
-    window.addEventListener("click", onIntentionalGesture, { capture: true });
-    window.addEventListener("touchend", onIntentionalGesture, { capture: true, passive: true });
-    window.addEventListener("keydown", onIntentionalGesture, { capture: true });
-    return () => {
-      window.removeEventListener("pointerup", onIntentionalGesture, { capture: true });
-      window.removeEventListener("click", onIntentionalGesture, { capture: true });
-      window.removeEventListener("touchend", onIntentionalGesture, { capture: true });
-      window.removeEventListener("keydown", onIntentionalGesture, { capture: true });
-    };
-  }, [enableSound]);
-
-  useEffect(() => {
     const v = videoRef.current;
     if (!v || !soundEnabled) return;
     cancelFade();
@@ -653,16 +646,25 @@ function Hero() {
 
       <div className="relative z-10 px-5 md:px-10">
 
-        <h1 className="font-[var(--font-display)] text-[clamp(2.4rem,7.6vw,9.5rem)] font-medium leading-[0.92] tracking-[-0.03em]">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="mb-6 text-hairline text-[var(--lcd-fg)]/80 md:mb-8"
+        >
+          <span className="mr-2 inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full bg-[var(--lcd-accent)] align-middle" />
+          Studio digital · Cinéma & artistes
+        </motion.div>
+
+        <h1 className="font-[var(--font-display)] text-[clamp(2.4rem,7.2vw,9rem)] font-medium leading-[0.92] tracking-[-0.03em]">
           <RevealLines
-            delay={1.0}
+            delay={0.55}
             lines={[
-              <>Les expériences</>,
-              <>digitales qui</>,
-              <>accompagnent</>,
-              <>les projets{" "}
+              <>Le site qui fait</>,
+              <>parler de votre film</>,
+              <>
                 <span className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">
-                  qui&nbsp;comptent.
+                  et de votre musique.
                 </span>
               </>,
             ]}
@@ -672,30 +674,33 @@ function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.8, duration: 0.8 }}
-          className="mt-14 md:mt-16 flex flex-col gap-8 md:flex-row md:flex-wrap md:items-end md:justify-between"
+          transition={{ delay: 1.0, duration: 0.8 }}
+          className="mt-8 flex flex-col gap-8 md:mt-12 md:flex-row md:flex-wrap md:items-end md:justify-between"
         >
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-[var(--lcd-fg)]/80 md:text-base">
-            {["Films", "Artistes", "Sportifs", "Événements"].map((w, i) => (
-              <span key={w} className="flex items-center gap-3 md:gap-4">
-                {i > 0 && <span className="h-px w-4 bg-[var(--lcd-line)] md:w-6" />}
-                {w}
-              </span>
-            ))}
+          <div className="flex max-w-xl flex-col gap-4">
+            <p className="text-base leading-relaxed text-[var(--lcd-fg)]/85 md:text-lg">
+              Sortie en salle, album, tournée : on conçoit des sites et des expériences
+              interactives qui créent l'attente et remplissent les salles.
+            </p>
+            <p className="text-hairline text-[var(--lcd-dim)]">
+              Ils nous ont fait confiance — <span className="text-[var(--lcd-fg)]">Kev Adams</span> ·{" "}
+              <span className="text-[var(--lcd-fg)]">Apollo Films</span>
+            </p>
           </div>
 
-          <div className="flex items-center justify-between gap-6 md:gap-10">
-            <a href="#projets" className="group inline-flex flex-1 items-center gap-3 md:flex-none">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[var(--lcd-line)] transition-colors group-hover:border-[var(--lcd-fg)] md:h-14 md:w-14">
+          <div className="flex flex-wrap items-center gap-4 md:gap-8">
+            <a
+              href="#contact"
+              className="group inline-flex items-center gap-3 rounded-full bg-[var(--lcd-fg)] px-6 py-4 text-[var(--lcd-bg)] transition-opacity hover:opacity-90"
+            >
+              <span className="text-hairline">Présenter mon projet</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </a>
+            <a href="#offres" className="group inline-flex items-center gap-3">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[var(--lcd-line)] transition-colors group-hover:border-[var(--lcd-fg)]">
                 <ArrowDown className="h-4 w-4" />
               </span>
-              <span className="text-hairline">Découvrir nos projets</span>
-            </a>
-            <a href="#contact" className="group inline-flex items-center gap-3">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[var(--lcd-line)] transition-colors group-hover:border-[var(--lcd-fg)] md:h-14 md:w-14">
-                <ArrowRight className="h-4 w-4" />
-              </span>
-              <span className="text-hairline hidden sm:inline">Nous écrire</span>
+              <span className="text-hairline">Voir les offres</span>
             </a>
           </div>
         </motion.div>
@@ -747,7 +752,7 @@ function Studio() {
           </h2>
           <div className="mt-8 max-w-2xl space-y-5 text-[var(--lcd-dim)] text-base md:text-lg leading-relaxed">
             <p>
-              LCD accompagne films, artistes et sportifs qui ont une histoire à raconter.
+              LCD accompagne les films et les artistes qui ont une histoire à raconter.
               On conçoit des expériences digitales pensées comme des objets de promotion —
               soignées, impactantes, à part entière.
             </p>
@@ -857,20 +862,6 @@ const FALLBACK_IMAGES = [permisImg, kevImg, rawImg, padelImg];
 
 type DbProject = Database["public"]["Tables"]["projects"]["Row"];
 
-function useProjects() {
-  return useQuery({
-    queryKey: ["projects"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("published", true)
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return data as DbProject[];
-    },
-  });
-}
 
 function dbToProject(p: DbProject, i: number): Project {
   return {
@@ -897,8 +888,8 @@ function Featured() {
     <section id="projets" className="relative border-t border-[var(--lcd-line)] py-14 md:py-24">
       <div className="px-5 md:px-10">
         <SectionHead
-          index="01"
-          eyebrow="Featured experiences"
+          index="02"
+          eyebrow="Réalisations"
           title={["Des projets", <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">qui laissent une trace.</em>]}
         />
 
@@ -1192,7 +1183,8 @@ function ProjectModal({
                 </a>
               ) : null}
               <a
-                href="mailto:hello@lcdstudio.fr"
+                href="#contact"
+                onClick={onClose}
                 className="group inline-flex items-center gap-4 border border-[var(--lcd-fg)]/40 px-6 py-4 transition-colors hover:border-[var(--lcd-fg)]"
               >
                 <span className="text-hairline">Un projet similaire ?</span>
@@ -1222,57 +1214,100 @@ function MetaBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ----------------------------- What we create ----------------------------- */
+/* --------------------------------- Offres --------------------------------- */
 
-const CATEGORIES: { label: string; img: string; tag: string }[] = [
-  { label: "Film Experiences", img: ctaImg, tag: "Promo & sortie ciné" },
-  { label: "Artist Experiences", img: kevImg, tag: "Tournée & lancement" },
-  { label: "Athlete Experiences", img: rawImg, tag: "Storytelling sportif" },
-  { label: "Event Experiences", img: eventImg, tag: "Activation live" },
-  { label: "TV Experiences", img: tvImg, tag: "Habillage & série" },
-  { label: "Interactive Campaigns", img: padelImg, tag: "Digital sur-mesure" },
+type Offer = {
+  type: "film" | "artiste";
+  label: string;
+  title: React.ReactNode;
+  pitch: string;
+  items: string[];
+  delay: string;
+  proof: string;
+  cta: string;
+  img: string;
+  page: string;
+  pageLabel: string;
+};
+
+const OFFERS: Offer[] = [
+  {
+    type: "film",
+    label: "Pour les distributeurs & productions",
+    title: <>Sortie <em className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">de film</em></>,
+    pitch:
+      "Un site événement pensé comme une campagne : on donne envie de voir le film, et on envoie le public en salle.",
+    items: [
+      "Site de sortie sur mesure, dans l'univers du film",
+      "Mécanique virale : jeu, énigme, QR code en salle",
+      "Bande-annonce, casting, presse, séances en 1 clic",
+      "Pensé mobile d'abord, prêt pour les réseaux",
+    ],
+    delay: "Livré en 3 à 5 semaines avant la sortie",
+    proof: "Apollo Films — Le Permis, La Maison de nos rêves",
+    cta: "Lancer un projet film",
+    img: permisImg,
+    page: "/site-sortie-film",
+    pageLabel: "Tout savoir sur nos sites de film",
+  },
+  {
+    type: "artiste",
+    label: "Pour les artistes, managers & labels",
+    title: <>Site <em className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">d'artiste</em></>,
+    pitch:
+      "Un site officiel à la hauteur de votre présence sur scène, qui rassemble votre public et vend vos dates.",
+    items: [
+      "Site officiel avec une vraie identité visuelle",
+      "Tournée, billetterie et actus centralisées",
+      "Lancement d'album ou de spectacle : page événement dédiée",
+      "Autonomie totale pour mettre à jour vos dates",
+    ],
+    delay: "Livré en 3 à 4 semaines",
+    proof: "Kev Adams — site officiel",
+    cta: "Lancer un projet artiste",
+    img: kevImg,
+    page: "/creation-site-artiste",
+    pageLabel: "Tout savoir sur nos sites d'artiste",
+  },
 ];
 
-function WhatWeCreate() {
+function Offers() {
   return (
-    <section id="what-we-create" className="relative border-t border-[var(--lcd-line)] py-14 md:py-24">
+    <section id="offres" className="relative border-t border-[var(--lcd-line)] py-14 md:py-24">
       <div className="px-5 md:px-10">
         <SectionHead
-          index="02"
-          eyebrow="What we create"
-          title={[<>Six univers.</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">Une seule obsession.</em>]}
+          index="01"
+          eyebrow="Offres"
+          title={[<>Deux spécialités.</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">Une seule obsession.</em>]}
         />
       </div>
 
-      {/* Desktop / tablet : 3 x 2 grid */}
-      <div className="mt-12 hidden md:grid md:grid-cols-3 md:gap-px md:bg-[var(--lcd-line)] md:border-y md:border-[var(--lcd-line)]">
-        {CATEGORIES.map((c, i) => (
-          <CategoryCard key={c.label} c={c} index={i} />
+      <div className="mt-12 grid grid-cols-1 gap-px border-y border-[var(--lcd-line)] bg-[var(--lcd-line)] md:mt-16 lg:grid-cols-2">
+        {OFFERS.map((o, i) => (
+          <OfferCard key={o.type} offer={o} index={i} />
         ))}
       </div>
 
-      {/* Mobile : horizontal snap carousel */}
-      <div className="mt-10 md:hidden">
-        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {CATEGORIES.map((c, i) => (
-            <div key={c.label} className="shrink-0 snap-center w-[82vw]">
-              <CategoryCard c={c} index={i} />
-            </div>
-          ))}
-        </div>
-        <div className="px-5 text-hairline text-[var(--lcd-dim)]">← Glisser pour explorer</div>
-      </div>
+      <p className="mt-10 px-5 text-sm text-[var(--lcd-dim)] md:px-10">
+        Humoriste ou artiste de spectacle ?{" "}
+        <a href="/site-humoriste" className="text-[var(--lcd-fg)] underline underline-offset-4">
+          Découvrez nos sites d'humoristes
+        </a>
+        . Un autre projet — sportif, événement, marque ?{" "}
+        <a
+          href="#contact"
+          onClick={() => selectBriefType("autre")}
+          className="text-[var(--lcd-fg)] underline underline-offset-4"
+        >
+          Parlons-en aussi
+        </a>
+        .
+      </p>
     </section>
   );
 }
 
-function CategoryCard({
-  c,
-  index,
-}: {
-  c: (typeof CATEGORIES)[number];
-  index: number;
-}) {
+function OfferCard({ offer, index }: { offer: Offer; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { margin: "-15% 0px -15% 0px", once: true });
   return (
@@ -1280,27 +1315,52 @@ function CategoryCard({
       ref={ref}
       initial={{ opacity: 0, y: 24 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.7, ease: EASE, delay: (index % 3) * 0.08 }}
-      className="group relative flex flex-col bg-[var(--lcd-bg)]"
-      data-cursor
+      transition={{ duration: 0.7, ease: EASE, delay: index * 0.1 }}
+      className="group flex flex-col bg-[var(--lcd-bg)]"
     >
-      <div className="relative aspect-[4/5] w-full overflow-hidden">
-        <motion.img
-          src={c.img}
-          alt={c.label}
+      <div className="relative aspect-[16/9] w-full overflow-hidden">
+        <img
+          src={offer.img}
+          alt=""
           loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover grayscale-[15%] transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06] group-hover:grayscale-0"
+          className="absolute inset-0 h-full w-full object-cover grayscale-[15%] transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04] group-hover:grayscale-0"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-        <span className="absolute left-4 top-4 text-hairline text-[var(--lcd-fg)]/80">
-          {String(index + 1).padStart(2, "0")}
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--lcd-bg)] via-black/20 to-transparent" />
+        <span className="absolute left-5 top-5 text-hairline text-[var(--lcd-fg)]/85 md:left-8 md:top-8">
+          {String(index + 1).padStart(2, "0")} · {offer.label}
         </span>
       </div>
-      <div className="flex flex-col gap-2 p-5 md:p-6">
-        <h3 className="font-[var(--font-display)] text-2xl leading-tight tracking-[-0.02em] md:text-3xl">
-          {c.label}
+      <div className="flex flex-1 flex-col gap-6 px-5 pb-10 pt-2 md:px-8 md:pb-12">
+        <h3 className="font-[var(--font-display)] text-4xl font-medium leading-tight tracking-[-0.02em] md:text-5xl">
+          {offer.title}
         </h3>
-        <span className="text-hairline text-[var(--lcd-dim)]">{c.tag}</span>
+        <p className="max-w-lg text-base leading-relaxed text-[var(--lcd-fg)]/85">{offer.pitch}</p>
+        <ul className="flex flex-col gap-2.5 text-sm text-[var(--lcd-fg)]/80 md:text-base">
+          {offer.items.map((it) => (
+            <li key={it} className="flex items-baseline gap-3">
+              <span className="h-px w-4 shrink-0 translate-y-[-4px] bg-[var(--lcd-accent)]" />
+              {it}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-auto flex flex-col gap-1 border-t border-[var(--lcd-line)] pt-5 text-hairline">
+          <span className="text-[var(--lcd-fg)]">{offer.delay}</span>
+          <span className="text-[var(--lcd-dim)]">Référence : {offer.proof}</span>
+        </div>
+        <a
+          href="#contact"
+          onClick={() => selectBriefType(offer.type)}
+          className="group/cta inline-flex w-fit items-center gap-4 border border-[var(--lcd-fg)]/40 px-6 py-4 transition-colors hover:border-[var(--lcd-fg)] hover:bg-[var(--lcd-fg)] hover:text-[var(--lcd-bg)]"
+        >
+          <span className="text-hairline">{offer.cta}</span>
+          <ArrowRight className="h-3 w-3 transition-transform group-hover/cta:translate-x-1" />
+        </a>
+        <a
+          href={offer.page}
+          className="w-fit text-hairline text-[var(--lcd-dim)] underline underline-offset-4 hover:text-[var(--lcd-fg)]"
+        >
+          {offer.pageLabel} →
+        </a>
       </div>
     </motion.div>
   );
@@ -1326,7 +1386,7 @@ function Approach() {
     <section id="approche" className="relative border-t border-[var(--lcd-line)] py-14 md:py-24">
       <div className="px-5 md:px-10">
         <SectionHead
-          index="03"
+          index="04"
           eyebrow="Notre approche"
           title={[<>Des idées.</>, <>Un processus.</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">Des émotions.</em>]}
         />
@@ -1454,26 +1514,7 @@ const CONCEPTS_FALLBACK = [
 
 function ConceptLab({ featured = false }: { featured?: boolean } = {}) {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
-  const { data } = useQuery({
-    queryKey: ["concepts"],
-    queryFn: async () => {
-      const { data, error } = await (supabase as unknown as {
-        from: (t: string) => {
-          select: (c: string) => {
-            eq: (c: string, v: boolean) => {
-              order: (c: string, o: { ascending: boolean }) => Promise<{ data: DbConcept[] | null; error: Error | null }>;
-            };
-          };
-        };
-      })
-        .from("concepts")
-        .select("*")
-        .eq("published", true)
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as DbConcept[];
-    },
-  });
+  const { data } = useConcepts();
   const items = (data ?? []).map((c, i) => ({
     tag: c.tag,
     title: c.title,
@@ -1498,7 +1539,7 @@ function ConceptLab({ featured = false }: { featured?: boolean } = {}) {
 
       <div className="relative px-5 md:px-10">
         <SectionHead
-          index={featured ? "01" : "04"}
+          index={featured ? "01" : "05"}
           eyebrow={featured ? "En ce moment · Concept lab" : "Concept lab"}
           title={
             featured
@@ -1650,7 +1691,8 @@ function ConceptModal({
             </p>
             <div className="mt-16 flex flex-wrap items-center gap-4">
               <a
-                href="mailto:hello@lcdstudio.fr"
+                href="#contact"
+                onClick={onClose}
                 className="group inline-flex items-center gap-4 border border-[var(--lcd-fg)] bg-[var(--lcd-fg)] px-6 py-4 text-[var(--lcd-bg)] transition-colors hover:bg-transparent hover:text-[var(--lcd-fg)]"
               >
                 <span className="text-hairline">Discuter de ce concept</span>
@@ -1686,19 +1728,7 @@ type CasePreview = {
 };
 
 function CaseStudiesPreview() {
-  const { data = [] } = useQuery({
-    queryKey: ["case-studies-preview"],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("case_studies")
-        .select("id,slug,client,title,tagline,cover_url,release_label")
-        .eq("published", true)
-        .order("sort_order", { ascending: true })
-        .limit(6);
-      if (error) throw error;
-      return (data ?? []) as CasePreview[];
-    },
-  });
+  const { data = [] } = useCasePreviews();
 
   if (data.length === 0) return null;
 
@@ -1722,7 +1752,7 @@ function CaseStudiesPreview() {
 
       <div className="relative px-5 md:px-10">
         <SectionHead
-          index="05"
+          index="03"
           eyebrow="Études de cas"
           title={[
             <>Le parcours,</>,
@@ -1837,28 +1867,53 @@ function FinalCTA() {
           loading="lazy"
           className="h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-0 bg-black/70" />
       </motion.div>
 
-      <div className="relative z-10 mx-auto flex min-h-[80svh] max-w-6xl flex-col items-start justify-center gap-10 px-5 py-20 md:px-10 md:py-28">
-        <span className="text-hairline text-[var(--lcd-dim)]">
-          <span className="mr-2 inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full bg-[var(--lcd-accent)] align-middle" />
-          parlons de votre prochain lancement
-        </span>
-        <h2 className="font-[var(--font-display)] text-[clamp(2.6rem,8vw,9rem)] font-medium leading-[0.92] tracking-[-0.03em]">
-          Imaginons <em className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">ensemble</em>
-          <br />
-          la prochaine
-          <br />
-          expérience.
-        </h2>
-        <a
-          href="mailto:hello@lcdstudio.fr"
-          className="group inline-flex items-center gap-4 border border-[var(--lcd-fg)]/40 px-8 py-5 transition-colors hover:border-[var(--lcd-fg)]"
-        >
-          <span className="text-hairline">Prendre rendez-vous</span>
-          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-        </a>
+      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-5 py-20 md:px-10 md:py-28 lg:grid-cols-12 lg:gap-16">
+        <div className="flex flex-col items-start gap-8 lg:col-span-5">
+          <span className="text-hairline text-[var(--lcd-dim)]">
+            <span className="mr-2 inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full bg-[var(--lcd-accent)] align-middle" />
+            parlons de votre prochaine sortie
+          </span>
+          <h2 className="font-[var(--font-display)] text-[clamp(2.6rem,6vw,6.5rem)] font-medium leading-[0.92] tracking-[-0.03em]">
+            Votre sortie
+            <br />
+            approche ?{" "}
+            <em className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">Parlons-en.</em>
+          </h2>
+          <ul className="flex flex-col gap-3 text-base text-[var(--lcd-fg)]/85">
+            {[
+              "Réponse et première idée sous 48 h",
+              "Site livré en 3 à 5 semaines, calé sur votre date",
+              "Un interlocuteur unique, de l'idée à la mise en ligne",
+            ].map((t) => (
+              <li key={t} className="flex items-baseline gap-3">
+                <span className="h-px w-5 shrink-0 translate-y-[-4px] bg-[var(--lcd-accent)]" />
+                {t}
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-hairline">
+            <a
+              href={whatsappUrl()}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 text-[var(--lcd-fg)] underline-offset-4 hover:underline"
+            >
+              WhatsApp · {CONTACT_PHONE_LABEL}
+            </a>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="text-[var(--lcd-dim)] underline-offset-4 hover:text-[var(--lcd-fg)] hover:underline"
+            >
+              {CONTACT_EMAIL}
+            </a>
+          </div>
+        </div>
+        <div className="lg:col-span-7">
+          <BriefForm />
+        </div>
       </div>
     </section>
   );
@@ -1872,6 +1927,7 @@ function Footer({
 }: { hasConcepts?: boolean; hasCases?: boolean } = {}) {
   const studioLinks = [
     { label: "À propos", href: "#studio" },
+    { label: "Offres", href: "#offres" },
     { label: "Projets", href: "#projets" },
     { label: "Approche", href: "#approche" },
     ...(hasConcepts ? [{ label: "Concepts", href: "#concepts" }] : []),
@@ -1891,14 +1947,18 @@ function Footer({
             className="h-auto w-40 md:w-52"
           />
           <p className="mt-6 text-sm text-[var(--lcd-dim)]">
-            Studio d'expériences digitales pour le cinéma, les artistes, les sportifs et les
-            grands événements.
+            Studio digital spécialisé dans les sites de sortie de films et les sites
+            d'artistes.
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-4">
           <FooterCol
             title="Studio"
             links={studioLinks}
+          />
+          <FooterCol
+            title="Expertises"
+            links={LANDINGS.map((l) => ({ label: l.navLabel, href: l.path }))}
           />
           <FooterCol
             title="Suivez-nous"
@@ -1912,6 +1972,7 @@ function Footer({
             links={[
               { label: "hello@lcdstudio.fr", href: "mailto:hello@lcdstudio.fr" },
               { label: "0033 6 13 63 09 84", href: "tel:+33613630984" },
+              { label: "WhatsApp", href: whatsappUrl() },
               { label: "France", href: "#" },
             ]}
           />

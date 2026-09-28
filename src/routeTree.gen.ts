@@ -12,6 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CreationSiteArtisteRouteImport } from './routes/creation-site-artiste'
+import { Route as SiteHumoristeRouteImport } from './routes/site-humoriste'
+import { Route as SiteSortieFilmRouteImport } from './routes/site-sortie-film'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as EtudesSlugRouteImport } from './routes/etudes.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +33,26 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreationSiteArtisteRoute = CreationSiteArtisteRouteImport.update({
+  id: '/creation-site-artiste',
+  path: '/creation-site-artiste',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteHumoristeRoute = SiteHumoristeRouteImport.update({
+  id: '/site-humoriste',
+  path: '/site-humoriste',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteSortieFilmRoute = SiteSortieFilmRouteImport.update({
+  id: '/site-sortie-film',
+  path: '/site-sortie-film',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EtudesSlugRoute = EtudesSlugRouteImport.update({
   id: '/etudes/$slug',
   path: '/etudes/$slug',
@@ -39,12 +63,20 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/creation-site-artiste': typeof CreationSiteArtisteRoute
+  '/site-humoriste': typeof SiteHumoristeRoute
+  '/site-sortie-film': typeof SiteSortieFilmRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/etudes/$slug': typeof EtudesSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/creation-site-artiste': typeof CreationSiteArtisteRoute
+  '/site-humoriste': typeof SiteHumoristeRoute
+  '/site-sortie-film': typeof SiteSortieFilmRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/etudes/$slug': typeof EtudesSlugRoute
 }
 export interface FileRoutesById {
@@ -52,20 +84,53 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/creation-site-artiste': typeof CreationSiteArtisteRoute
+  '/site-humoriste': typeof SiteHumoristeRoute
+  '/site-sortie-film': typeof SiteSortieFilmRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/etudes/$slug': typeof EtudesSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/auth' | '/etudes/$slug'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/creation-site-artiste'
+    | '/site-humoriste'
+    | '/site-sortie-film'
+    | '/sitemap.xml'
+    | '/etudes/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/auth' | '/etudes/$slug'
-  id: '__root__' | '/' | '/admin' | '/auth' | '/etudes/$slug'
+  to:
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/creation-site-artiste'
+    | '/site-humoriste'
+    | '/site-sortie-film'
+    | '/sitemap.xml'
+    | '/etudes/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/creation-site-artiste'
+    | '/site-humoriste'
+    | '/site-sortie-film'
+    | '/sitemap.xml'
+    | '/etudes/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  CreationSiteArtisteRoute: typeof CreationSiteArtisteRoute
+  SiteHumoristeRoute: typeof SiteHumoristeRoute
+  SiteSortieFilmRoute: typeof SiteSortieFilmRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   EtudesSlugRoute: typeof EtudesSlugRoute
 }
 
@@ -92,6 +157,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creation-site-artiste': {
+      id: '/creation-site-artiste'
+      path: '/creation-site-artiste'
+      fullPath: '/creation-site-artiste'
+      preLoaderRoute: typeof CreationSiteArtisteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/site-humoriste': {
+      id: '/site-humoriste'
+      path: '/site-humoriste'
+      fullPath: '/site-humoriste'
+      preLoaderRoute: typeof SiteHumoristeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/site-sortie-film': {
+      id: '/site-sortie-film'
+      path: '/site-sortie-film'
+      fullPath: '/site-sortie-film'
+      preLoaderRoute: typeof SiteSortieFilmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/etudes/$slug': {
       id: '/etudes/$slug'
       path: '/etudes/$slug'
@@ -106,6 +199,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  CreationSiteArtisteRoute: CreationSiteArtisteRoute,
+  SiteHumoristeRoute: SiteHumoristeRoute,
+  SiteSortieFilmRoute: SiteSortieFilmRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   EtudesSlugRoute: EtudesSlugRoute,
 }
 export const routeTree = rootRouteImport
