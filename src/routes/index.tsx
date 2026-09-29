@@ -1256,14 +1256,14 @@ function OfferCard({ offer, index }: { offer: Offer; index: number }) {
           <span className="hidden md:inline">{offer.label}</span>
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-4 px-5 pb-7 pt-5 md:gap-6 md:px-8 md:pb-12 md:pt-2">
-        <h3 className="font-[var(--font-display)] text-[2rem] font-medium leading-[1.05] tracking-[-0.02em] md:text-5xl md:leading-tight">
+      <div className="flex flex-1 flex-col gap-3 px-5 pb-6 pt-5 md:gap-6 md:px-8 md:pb-12 md:pt-2">
+        <h3 className="font-[var(--font-display)] text-[1.75rem] font-medium leading-[1.05] tracking-[-0.02em] md:text-5xl md:leading-tight">
           {offer.title}
         </h3>
-        <p className="max-w-lg text-sm leading-relaxed text-[var(--lcd-fg)]/85 md:text-base">
+        <p className="line-clamp-2 max-w-lg text-sm leading-relaxed text-[var(--lcd-fg)]/85 md:line-clamp-none md:text-base">
           {offer.pitch}
         </p>
-        <ul className="flex flex-col gap-2 text-sm text-[var(--lcd-fg)]/80 md:gap-2.5 md:text-base">
+        <ul className="hidden flex-col gap-2.5 text-base text-[var(--lcd-fg)]/80 md:flex">
           {offer.items.map((it) => (
             <li key={it} className="flex items-baseline gap-3">
               <span className="h-px w-4 shrink-0 translate-y-[-4px] bg-[var(--lcd-accent)]" />
@@ -1271,22 +1271,22 @@ function OfferCard({ offer, index }: { offer: Offer; index: number }) {
             </li>
           ))}
         </ul>
-        <p className="mt-auto border-t border-[var(--lcd-line)] pt-4 text-hairline md:pt-5">
-          <span className="text-[var(--lcd-fg)]">{offer.delay}</span>
-          <span className="text-[var(--lcd-dim)]"> · Réf. {offer.proof}</span>
+        <p className="text-hairline text-[var(--lcd-fg)] md:mt-auto md:border-t md:border-[var(--lcd-line)] md:pt-5">
+          {offer.delay}
+          <span className="hidden text-[var(--lcd-dim)] md:inline"> · Réf. {offer.proof}</span>
         </p>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 pt-1 md:pt-0">
           <a
             href="#contact"
             onClick={() => selectBriefType(offer.type)}
-            className="group/cta inline-flex w-fit items-center gap-4 border border-[var(--lcd-fg)]/40 px-6 py-4 transition-colors hover:border-[var(--lcd-fg)] hover:bg-[var(--lcd-fg)] hover:text-[var(--lcd-bg)]"
+            className="group/cta inline-flex items-center justify-center gap-4 border border-[var(--lcd-fg)]/40 px-6 py-4 transition-colors hover:border-[var(--lcd-fg)] hover:bg-[var(--lcd-fg)] hover:text-[var(--lcd-bg)] md:w-fit md:justify-start"
           >
             <span className="text-hairline">{offer.cta}</span>
             <ArrowRight className="h-3 w-3 transition-transform group-hover/cta:translate-x-1" />
           </a>
           <a
             href={offer.page}
-            className="w-fit text-hairline text-[var(--lcd-dim)] underline underline-offset-4 hover:text-[var(--lcd-fg)]"
+            className="w-fit self-center text-hairline text-[var(--lcd-dim)] underline underline-offset-4 hover:text-[var(--lcd-fg)] md:self-auto"
           >
             {offer.pageLabel} →
           </a>
