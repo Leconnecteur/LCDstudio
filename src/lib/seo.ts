@@ -1,6 +1,6 @@
 import { CONTACT_EMAIL } from "@/lib/contact";
 
-export const SITE_URL = "https://lcdstudio.fr";
+export const SITE_URL = "https://www.lcdstudio.fr";
 export const SITE_NAME = "LCD Studio";
 export const DEFAULT_OG_IMAGE =
   "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a127f640-9b65-495e-aec7-6829d181d0d8";
