@@ -158,6 +158,14 @@
   html {
     background-color: var(--lcd-bg);
   }
+  section[id] {
+    scroll-margin-top: 84px;
+  }
+  @media (min-width: 768px) {
+    section[id] {
+      scroll-margin-top: 108px;
+    }
+  }
 }
 
 @utility text-hairline {

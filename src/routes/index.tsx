@@ -12,14 +12,7 @@ import { Loader } from "@/components/Loader";
 import { BriefForm } from "@/components/BriefForm";
 import { CONTACT_EMAIL, CONTACT_PHONE_LABEL, selectBriefType, whatsappUrl } from "@/lib/contact";
 import { LANDINGS } from "@/lib/landings";
-import {
-  ldJson,
-  ORGANIZATION_ID,
-  organizationJsonLd,
-  seo,
-  SITE_NAME,
-  SITE_URL,
-} from "@/lib/seo";
+import { ldJson, ORGANIZATION_ID, organizationJsonLd, seo, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 import heroImg from "@/assets/hero.jpg";
 import heroVideoMp4 from "@/assets/hero-cinema-browser.mp4";
@@ -127,12 +120,19 @@ function Home() {
   const hasProjects = projectRows.length > 0;
   const hasConcepts = concepts.length > 0;
   const hasCases = cases.length > 0;
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[var(--lcd-bg)] text-[var(--lcd-fg)] selection:bg-[var(--lcd-accent)]/40">
       <SmoothScroll />
       <CustomCursor />
       <Loader />
-      <Nav hasProjects={hasProjects} hasConcepts={hasConcepts} hasCases={hasCases} />
+      <Nav
+        hasProjects={hasProjects}
+        hasConcepts={hasConcepts}
+        hasCases={hasCases}
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+      />
       <main>
         <Hero />
         <Clients />
@@ -146,7 +146,7 @@ function Home() {
         <FinalCTA />
       </main>
       <Footer hasConcepts={hasConcepts} hasCases={hasCases} />
-      <MobileBar />
+      <MobileBar hidden={menuOpen} />
     </div>
   );
 }
@@ -157,12 +157,16 @@ function Nav({
   hasProjects = true,
   hasConcepts = true,
   hasCases = true,
+  open,
+  onOpenChange,
 }: {
   hasProjects?: boolean;
   hasConcepts?: boolean;
   hasCases?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const setOpen = onOpenChange;
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
@@ -212,7 +216,7 @@ function Nav({
             type="button"
             aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
             aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setOpen(!open)}
             className="relative z-50 inline-flex h-11 items-center gap-3 rounded-full border border-[var(--lcd-fg)]/25 pl-4 pr-1.5 md:hidden"
           >
             <span className="text-hairline uppercase">{open ? "Fermer" : "Menu"}</span>
@@ -255,7 +259,9 @@ function Nav({
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--lcd-accent)]" />
               Menu
             </span>
-            <span>{String(links.length).padStart(2, "0")} / {String(links.length).padStart(2, "0")}</span>
+            <span>
+              {String(links.length).padStart(2, "0")} / {String(links.length).padStart(2, "0")}
+            </span>
           </div>
 
           <ul className="mt-8 flex flex-col">
@@ -334,8 +340,9 @@ function Nav({
 
 /* ------------------------------ Mobile bar ------------------------------ */
 
-function MobileBar() {
+function MobileBar({ hidden = false }: { hidden?: boolean }) {
   const [visible, setVisible] = useState(false);
+  const [contactVisible, setContactVisible] = useState(false);
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
@@ -350,12 +357,24 @@ function MobileBar() {
       window.removeEventListener("resize", onScroll);
     };
   }, []);
+  useEffect(() => {
+    const contact = document.getElementById("contact");
+    if (!contact) return;
+    const io = new IntersectionObserver(([entry]) => setContactVisible(entry.isIntersecting), {
+      threshold: 0.15,
+    });
+    io.observe(contact);
+    return () => io.disconnect();
+  }, []);
+  const show = visible && !hidden && !contactVisible;
   return (
     <motion.div
       initial={false}
-      animate={{ y: visible ? 0 : 120, opacity: visible ? 1 : 0 }}
+      animate={{ y: show ? 0 : 120, opacity: show ? 1 : 0 }}
       transition={{ duration: 0.6, ease: EASE }}
-      className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-between rounded-full border border-[var(--lcd-fg)]/15 bg-[var(--lcd-bg)]/85 px-2 py-2 pl-5 backdrop-blur md:hidden"
+      className={`fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-full border border-[var(--lcd-fg)]/15 bg-[var(--lcd-bg)]/85 px-2 py-2 pl-5 backdrop-blur md:hidden ${
+        show ? "pointer-events-auto" : "pointer-events-none"
+      }`}
     >
       <span className="text-hairline text-[var(--lcd-dim)]">
         <span className="mr-2 inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full bg-[var(--lcd-accent)] align-middle" />
@@ -386,11 +405,7 @@ function RevealLines({
   return (
     <span className={className}>
       {lines.map((line, i) => (
-        <span
-          key={i}
-          className="block overflow-hidden"
-          style={{ lineHeight: 0.95 }}
-        >
+        <span key={i} className="block overflow-hidden" style={{ lineHeight: 0.95 }}>
           <motion.span
             initial={{ y: "110%" }}
             animate={{ y: "0%" }}
@@ -412,11 +427,8 @@ function Hero() {
   const scale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const soundEnabledRef = useRef(false);
-  const userMutedRef = useRef(false);
   const fadeFrameRef = useRef<number | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
-  const [soundPromptVisible, setSoundPromptVisible] = useState(false);
-  const [heroInView, setHeroInView] = useState(true);
 
   const cancelFade = useCallback(() => {
     if (fadeFrameRef.current !== null) {
@@ -425,16 +437,10 @@ function Hero() {
     }
   }, []);
 
-  const isHeroAudibleZone = useCallback(() => {
-    const el = ref.current;
-    if (!el) return false;
-    const rect = el.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    return rect.bottom > viewportHeight * 0.18 && rect.top < viewportHeight * 0.82;
-  }, []);
-
+  // Le bouton son est accessible partout sur le site : il contrôle la vidéo
+  // du hero (qui continue de tourner en boucle en arrière-plan) quel que soit
+  // l'endroit où l'on se trouve dans la page.
   const enableSound = useCallback(() => {
-    if (userMutedRef.current || !isHeroAudibleZone()) return;
     if (soundEnabledRef.current) return;
     const v = videoRef.current;
     if (!v) return;
@@ -448,112 +454,64 @@ function Hero() {
         .then(() => {
           soundEnabledRef.current = true;
           setSoundEnabled(true);
-          setSoundPromptVisible(false);
         })
         .catch(() => {
           v.muted = true;
           v.defaultMuted = true;
-          setSoundPromptVisible(true);
-          v.play().catch(() => {});
         });
       return;
     }
     soundEnabledRef.current = true;
     setSoundEnabled(true);
-    setSoundPromptVisible(false);
-  }, [cancelFade, isHeroAudibleZone]);
-
-  const disableSound = useCallback((opts?: { fade?: boolean }) => {
-    cancelFade();
-    const v = videoRef.current;
-    soundEnabledRef.current = false;
-    setSoundEnabled(false);
-    if (!v) return;
-    const finish = () => {
-      v.muted = true;
-      v.defaultMuted = true;
-      v.volume = 1;
-      fadeFrameRef.current = null;
-    };
-    if (opts?.fade && !v.muted) {
-      const start = v.volume;
-      const duration = 900;
-      const t0 = performance.now();
-      const step = (t: number) => {
-        const p = Math.min(1, (t - t0) / duration);
-        v.volume = Math.max(0, start * (1 - p));
-        if (p < 1) fadeFrameRef.current = requestAnimationFrame(step);
-        else finish();
-      };
-      fadeFrameRef.current = requestAnimationFrame(step);
-    } else {
-      finish();
-    }
   }, [cancelFade]);
+
+  const disableSound = useCallback(
+    (opts?: { fade?: boolean }) => {
+      cancelFade();
+      const v = videoRef.current;
+      soundEnabledRef.current = false;
+      setSoundEnabled(false);
+      if (!v) return;
+      const finish = () => {
+        v.muted = true;
+        v.defaultMuted = true;
+        v.volume = 1;
+        fadeFrameRef.current = null;
+      };
+      if (opts?.fade && !v.muted) {
+        const start = v.volume;
+        const duration = 900;
+        const t0 = performance.now();
+        const step = (t: number) => {
+          const p = Math.min(1, (t - t0) / duration);
+          v.volume = Math.max(0, start * (1 - p));
+          if (p < 1) fadeFrameRef.current = requestAnimationFrame(step);
+          else finish();
+        };
+        fadeFrameRef.current = requestAnimationFrame(step);
+      } else {
+        finish();
+      }
+    },
+    [cancelFade],
+  );
 
   const toggleSound = useCallback(() => {
     if (soundEnabledRef.current) {
-      userMutedRef.current = true;
       disableSound();
       return;
     }
-    userMutedRef.current = false;
     enableSound();
   }, [disableSound, enableSound]);
 
-  useEffect(() => {
-    const cleanup = () => {
-      window.removeEventListener("scroll", keepMutedPlaybackAlive);
-    };
-
-    const playMuted = () => {
-      const v = videoRef.current;
-      if (!v) return;
-      v.muted = true;
-      v.defaultMuted = true;
-      v.play().catch(() => {});
-    };
-
-    const keepMutedPlaybackAlive = () => {
-      if (!isHeroAudibleZone()) {
-        setSoundPromptVisible(false);
-        disableSound();
-        return;
-      }
-      if (soundEnabledRef.current) return;
-      const v = videoRef.current;
-      if (!v) return;
-      // A scroll is not a reliable user gesture for sound in Chrome/Safari.
-      // Keep the hero playing silently instead of attempting an unmute that can pause it.
-      if (!v.muted || v.paused) playMuted();
-      setSoundPromptVisible(true);
-    };
-
-    playMuted();
-    window.addEventListener("scroll", keepMutedPlaybackAlive, { passive: true });
-    return cleanup;
-  }, [disableSound, isHeroAudibleZone]);
-
+  // Lance la vidéo en boucle, muette, dès le chargement de la page.
   useEffect(() => {
     const v = videoRef.current;
-    if (!v || !soundEnabled) return;
-    cancelFade();
-    if (!isHeroAudibleZone()) {
-      disableSound();
-      return;
-    }
-    v.muted = false;
-    v.defaultMuted = false;
-    v.volume = 1;
-    v.play().catch(() => {
-      soundEnabledRef.current = false;
-      setSoundEnabled(false);
-      setSoundPromptVisible(true);
-      v.muted = true;
-      v.defaultMuted = true;
-      v.play().catch(() => {});
-    });
-  }, [cancelFade, disableSound, isHeroAudibleZone, soundEnabled]);
+    if (!v) return;
+    v.muted = true;
+    v.defaultMuted = true;
+    v.play().catch(() => {});
+  }, []);
 
   // Auto-coupure du son au bout de 18s pour ne pas devenir envahissant
   useEffect(() => {
@@ -561,39 +519,6 @@ function Hero() {
     const timer = window.setTimeout(() => disableSound({ fade: true }), 18000);
     return () => window.clearTimeout(timer);
   }, [soundEnabled, disableSound]);
-
-  // Coupe le son dès que le hero n'est plus visible à l'écran, y compris sur mobile.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const updateHeroAudioZone = () => {
-      const visible = isHeroAudibleZone();
-      setHeroInView(visible);
-      if (!visible) {
-        setSoundPromptVisible(false);
-        disableSound();
-      }
-    };
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        const visible = entry.isIntersecting && isHeroAudibleZone();
-        setHeroInView(visible);
-        if (!visible) disableSound();
-      },
-      { threshold: [0, 0.15, 0.35] },
-    );
-    io.observe(el);
-    updateHeroAudioZone();
-    window.addEventListener("scroll", updateHeroAudioZone, { passive: true });
-    window.addEventListener("touchmove", updateHeroAudioZone, { passive: true });
-    window.addEventListener("resize", updateHeroAudioZone);
-    return () => {
-      io.disconnect();
-      window.removeEventListener("scroll", updateHeroAudioZone);
-      window.removeEventListener("touchmove", updateHeroAudioZone);
-      window.removeEventListener("resize", updateHeroAudioZone);
-    };
-  }, [disableSound, isHeroAudibleZone]);
 
   return (
     <section
@@ -625,11 +550,8 @@ function Hero() {
         data-sound-toggle
         onClick={toggleSound}
         aria-pressed={soundEnabled}
-        className={`fixed bottom-24 right-5 z-30 inline-flex items-center gap-3 rounded-full border border-[var(--lcd-fg)]/20 bg-[var(--lcd-bg)]/45 px-4 py-3 text-hairline text-[var(--lcd-fg)] backdrop-blur transition-all duration-500 md:absolute md:bottom-10 md:right-10 ${
-          heroInView ? "pointer-events-auto" : "pointer-events-none translate-y-3 opacity-0"
-        } ${
-          heroInView && soundPromptVisible && !soundEnabled ? "opacity-100" : "opacity-70 hover:opacity-100"
-        }`}
+        aria-label={soundEnabled ? "Couper le son de la vidéo" : "Activer le son de la vidéo"}
+        className="fixed bottom-24 right-5 z-30 inline-flex items-center gap-3 rounded-full border border-[var(--lcd-fg)]/20 bg-[var(--lcd-bg)]/60 px-4 py-3 text-hairline text-[var(--lcd-fg)] opacity-80 backdrop-blur transition-opacity duration-300 hover:opacity-100 md:bottom-8 md:right-8"
       >
         <span className="relative flex h-2.5 w-2.5">
           {!soundEnabled && (
@@ -645,7 +567,6 @@ function Hero() {
       </button>
 
       <div className="relative z-10 px-5 md:px-10">
-
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -679,12 +600,12 @@ function Hero() {
         >
           <div className="flex max-w-xl flex-col gap-4">
             <p className="text-base leading-relaxed text-[var(--lcd-fg)]/85 md:text-lg">
-              Sortie en salle, album, tournée : on conçoit des sites et des expériences
-              interactives qui créent l'attente et remplissent les salles.
+              Sortie en salle, album, tournée : on conçoit des sites et des expériences interactives
+              qui créent l'attente et remplissent les salles.
             </p>
             <p className="text-hairline text-[var(--lcd-dim)]">
-              Ils nous ont fait confiance — <span className="text-[var(--lcd-fg)]">Kev Adams</span> ·{" "}
-              <span className="text-[var(--lcd-fg)]">Apollo Films</span>
+              Ils nous ont fait confiance — <span className="text-[var(--lcd-fg)]">Kev Adams</span>{" "}
+              · <span className="text-[var(--lcd-fg)]">Apollo Films</span>
             </p>
           </div>
 
@@ -715,10 +636,7 @@ function Hero() {
 
 function Studio() {
   return (
-    <section
-      id="studio"
-      className="relative border-t border-[var(--lcd-line)] py-14 md:py-24"
-    >
+    <section id="studio" className="relative border-t border-[var(--lcd-line)] py-14 md:py-24">
       <div className="px-5 md:px-10 grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-start">
         <div className="md:col-span-4">
           <div className="relative aspect-[4/5] overflow-hidden rounded-sm border border-[var(--lcd-line)] bg-[var(--lcd-elev)]">
@@ -747,20 +665,19 @@ function Studio() {
             — Le studio
           </div>
           <h2 className="font-[var(--font-serif)] text-[clamp(2.2rem,5vw,4.5rem)] leading-[1.05] tracking-tight">
-            Une <em className="italic text-[var(--lcd-dim)]">écriture visuelle</em> au
-            service des projets qui marquent.
+            Une <em className="italic text-[var(--lcd-dim)]">écriture visuelle</em> au service des
+            projets qui marquent.
           </h2>
           <div className="mt-8 max-w-2xl space-y-5 text-[var(--lcd-dim)] text-base md:text-lg leading-relaxed">
             <p>
-              LCD accompagne les films et les artistes qui ont une histoire à raconter.
-              On conçoit des expériences digitales pensées comme des objets de promotion —
-              soignées, impactantes, à part entière.
+              LCD accompagne les films et les artistes qui ont une histoire à raconter. On conçoit
+              des expériences digitales pensées comme des objets de promotion — soignées,
+              impactantes, à part entière.
             </p>
             <p>
-              Petit studio par choix, obsessionnel sur le détail. Passionné par le cinéma
-              et le monde artistique, je me renouvelle à chaque projet : changer de
-              registre, s'adapter, réinventer la mise en scène. La répétition n'est pas mon
-              terrain.
+              Petit studio par choix, obsessionnel sur le détail. Passionné par le cinéma et le
+              monde artistique, je me renouvelle à chaque projet : changer de registre, s'adapter,
+              réinventer la mise en scène. La répétition n'est pas mon terrain.
             </p>
           </div>
           <div className="mt-10 flex items-center gap-4">
@@ -780,12 +697,7 @@ function Studio() {
 
 /* -------------------------------- Clients -------------------------------- */
 
-const CLIENTS = [
-  "Kev Adams",
-  "Apollo Films",
-  "Holà los Padelistos",
-  "Raw Talent Sports",
-];
+const CLIENTS = ["Kev Adams", "Apollo Films", "Holà los Padelistos", "Raw Talent Sports"];
 
 function Clients() {
   const items = [...CLIENTS, ...CLIENTS, ...CLIENTS, ...CLIENTS];
@@ -805,10 +717,7 @@ function Clients() {
       <div className="group relative flex overflow-hidden">
         <div className="marquee flex shrink-0 items-center gap-8 md:gap-14">
           {items.map((name, i) => (
-            <div
-              key={`${name}-${i}`}
-              className="flex shrink-0 items-center gap-4 md:gap-6"
-            >
+            <div key={`${name}-${i}`} className="flex shrink-0 items-center gap-4 md:gap-6">
               <span className="font-[var(--font-serif)] text-base italic text-[var(--lcd-dim)] md:text-xl">
                 {String((i % CLIENTS.length) + 1).padStart(2, "0")}
               </span>
@@ -821,10 +730,7 @@ function Clients() {
         </div>
         <div className="marquee flex shrink-0 items-center gap-8 md:gap-14" aria-hidden="true">
           {items.map((name, i) => (
-            <div
-              key={`dup-${name}-${i}`}
-              className="flex shrink-0 items-center gap-4 md:gap-6"
-            >
+            <div key={`dup-${name}-${i}`} className="flex shrink-0 items-center gap-4 md:gap-6">
               <span className="font-[var(--font-serif)] text-base italic text-[var(--lcd-dim)] md:text-xl">
                 {String((i % CLIENTS.length) + 1).padStart(2, "0")}
               </span>
@@ -856,12 +762,10 @@ type Project = {
   url?: string;
 };
 
-
 // Images de repli pour les projets sans cover_url (rotation cinématographique).
 const FALLBACK_IMAGES = [permisImg, kevImg, rawImg, padelImg];
 
 type DbProject = Database["public"]["Tables"]["projects"]["Row"];
-
 
 function dbToProject(p: DbProject, i: number): Project {
   return {
@@ -890,7 +794,12 @@ function Featured() {
         <SectionHead
           index="02"
           eyebrow="Réalisations"
-          title={["Des projets", <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">qui laissent une trace.</em>]}
+          title={[
+            "Des projets",
+            <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">
+              qui laissent une trace.
+            </em>,
+          ]}
         />
 
         <div className="mt-10 flex items-center justify-between gap-4 md:mt-14">
@@ -904,7 +813,9 @@ function Featured() {
                 type="button"
                 onClick={() => setView(v)}
                 className={`rounded-full px-3 py-1.5 text-hairline transition-colors ${
-                  view === v ? "bg-[var(--lcd-fg)] text-[var(--lcd-bg)]" : "text-[var(--lcd-dim)] hover:text-[var(--lcd-fg)]"
+                  view === v
+                    ? "bg-[var(--lcd-fg)] text-[var(--lcd-bg)]"
+                    : "text-[var(--lcd-dim)] hover:text-[var(--lcd-fg)]"
                 }`}
               >
                 {v === "grid" ? "Grille" : "Index"}
@@ -916,7 +827,9 @@ function Featured() {
         {isLoading ? (
           <p className="mt-16 text-hairline text-[var(--lcd-dim)]">Chargement des projets…</p>
         ) : projects.length === 0 ? (
-          <p className="mt-16 text-hairline text-[var(--lcd-dim)]">Aucun projet publié pour le moment.</p>
+          <p className="mt-16 text-hairline text-[var(--lcd-dim)]">
+            Aucun projet publié pour le moment.
+          </p>
         ) : view === "grid" ? (
           <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:mt-14 md:grid-cols-4 md:gap-x-6 md:gap-y-16">
             {projects.map((p, i) => (
@@ -934,7 +847,7 @@ function Featured() {
         )}
       </div>
       <ProjectModal
-        project={activeIdx !== null ? projects[activeIdx] ?? null : null}
+        project={activeIdx !== null ? (projects[activeIdx] ?? null) : null}
         onClose={() => setActiveIdx(null)}
       />
     </section>
@@ -982,7 +895,9 @@ function ProjectThumb({
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--lcd-bg)]/80 to-transparent" />
         <div className="absolute left-3 right-3 top-3 flex items-start justify-between text-[10px] uppercase tracking-[0.2em] text-[var(--lcd-fg)]/70">
-          <span>{String(index + 1).padStart(2, "0")}/{String(total).padStart(2, "0")}</span>
+          <span>
+            {String(index + 1).padStart(2, "0")}/{String(total).padStart(2, "0")}
+          </span>
           <span>{project.year ?? ""}</span>
         </div>
       </button>
@@ -990,7 +905,9 @@ function ProjectThumb({
         <h3 className="font-[var(--font-display)] text-base font-medium leading-tight tracking-[-0.01em] md:text-lg">
           {project.title}
         </h3>
-        <p className="mt-1 text-[11px] uppercase tracking-[0.15em] text-[var(--lcd-dim)]">{project.kicker}</p>
+        <p className="mt-1 text-[11px] uppercase tracking-[0.15em] text-[var(--lcd-dim)]">
+          {project.kicker}
+        </p>
         {project.url ? (
           <a
             href={project.url}
@@ -1070,13 +987,7 @@ function ProjectIndex({ projects, onOpen }: { projects: Project[]; onOpen: (i: n
   );
 }
 
-function ProjectModal({
-  project,
-  onClose,
-}: {
-  project: Project | null;
-  onClose: () => void;
-}) {
+function ProjectModal({ project, onClose }: { project: Project | null; onClose: () => void }) {
   const open = project !== null;
   useEffect(() => {
     if (!open) return;
@@ -1139,10 +1050,7 @@ function ProjectModal({
             <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
               <MetaBlock label="Client" value={project.client ?? "—"} />
               <MetaBlock label="Année" value={project.year ?? "—"} />
-              <MetaBlock
-                label="Périmètre"
-                value={project.role?.join(" · ") ?? "—"}
-              />
+              <MetaBlock label="Périmètre" value={project.role?.join(" · ") ?? "—"} />
             </div>
             <p className="mt-16 max-w-3xl font-[var(--font-serif)] text-2xl italic leading-snug text-[var(--lcd-fg)] md:text-4xl">
               {project.story}
@@ -1228,13 +1136,19 @@ type Offer = {
   img: string;
   page: string;
   pageLabel: string;
+  shortLabel: string;
 };
 
 const OFFERS: Offer[] = [
   {
     type: "film",
     label: "Pour les distributeurs & productions",
-    title: <>Sortie <em className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">de film</em></>,
+    shortLabel: "Distributeurs & productions",
+    title: (
+      <>
+        Sortie <em className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">de film</em>
+      </>
+    ),
     pitch:
       "Un site événement pensé comme une campagne : on donne envie de voir le film, et on envoie le public en salle.",
     items: [
@@ -1253,7 +1167,12 @@ const OFFERS: Offer[] = [
   {
     type: "artiste",
     label: "Pour les artistes, managers & labels",
-    title: <>Site <em className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">d'artiste</em></>,
+    shortLabel: "Artistes, managers & labels",
+    title: (
+      <>
+        Site <em className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">d'artiste</em>
+      </>
+    ),
     pitch:
       "Un site officiel à la hauteur de votre présence sur scène, qui rassemble votre public et vend vos dates.",
     items: [
@@ -1278,7 +1197,12 @@ function Offers() {
         <SectionHead
           index="01"
           eyebrow="Offres"
-          title={[<>Deux spécialités.</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">Une seule obsession.</em>]}
+          title={[
+            <>Deux spécialités.</>,
+            <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">
+              Une seule obsession.
+            </em>,
+          ]}
         />
       </div>
 
@@ -1318,7 +1242,7 @@ function OfferCard({ offer, index }: { offer: Offer; index: number }) {
       transition={{ duration: 0.7, ease: EASE, delay: index * 0.1 }}
       className="group flex flex-col bg-[var(--lcd-bg)]"
     >
-      <div className="relative aspect-[16/9] w-full overflow-hidden">
+      <div className="relative aspect-[2/1] w-full overflow-hidden md:aspect-[16/9]">
         <img
           src={offer.img}
           alt=""
@@ -1327,15 +1251,19 @@ function OfferCard({ offer, index }: { offer: Offer; index: number }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--lcd-bg)] via-black/20 to-transparent" />
         <span className="absolute left-5 top-5 text-hairline text-[var(--lcd-fg)]/85 md:left-8 md:top-8">
-          {String(index + 1).padStart(2, "0")} · {offer.label}
+          {String(index + 1).padStart(2, "0")} ·{" "}
+          <span className="md:hidden">{offer.shortLabel}</span>
+          <span className="hidden md:inline">{offer.label}</span>
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-6 px-5 pb-10 pt-2 md:px-8 md:pb-12">
-        <h3 className="font-[var(--font-display)] text-4xl font-medium leading-tight tracking-[-0.02em] md:text-5xl">
+      <div className="flex flex-1 flex-col gap-4 px-5 pb-7 pt-5 md:gap-6 md:px-8 md:pb-12 md:pt-2">
+        <h3 className="font-[var(--font-display)] text-[2rem] font-medium leading-[1.05] tracking-[-0.02em] md:text-5xl md:leading-tight">
           {offer.title}
         </h3>
-        <p className="max-w-lg text-base leading-relaxed text-[var(--lcd-fg)]/85">{offer.pitch}</p>
-        <ul className="flex flex-col gap-2.5 text-sm text-[var(--lcd-fg)]/80 md:text-base">
+        <p className="max-w-lg text-sm leading-relaxed text-[var(--lcd-fg)]/85 md:text-base">
+          {offer.pitch}
+        </p>
+        <ul className="flex flex-col gap-2 text-sm text-[var(--lcd-fg)]/80 md:gap-2.5 md:text-base">
           {offer.items.map((it) => (
             <li key={it} className="flex items-baseline gap-3">
               <span className="h-px w-4 shrink-0 translate-y-[-4px] bg-[var(--lcd-accent)]" />
@@ -1343,24 +1271,26 @@ function OfferCard({ offer, index }: { offer: Offer; index: number }) {
             </li>
           ))}
         </ul>
-        <div className="mt-auto flex flex-col gap-1 border-t border-[var(--lcd-line)] pt-5 text-hairline">
+        <p className="mt-auto border-t border-[var(--lcd-line)] pt-4 text-hairline md:pt-5">
           <span className="text-[var(--lcd-fg)]">{offer.delay}</span>
-          <span className="text-[var(--lcd-dim)]">Référence : {offer.proof}</span>
+          <span className="text-[var(--lcd-dim)]"> · Réf. {offer.proof}</span>
+        </p>
+        <div className="flex flex-col gap-3">
+          <a
+            href="#contact"
+            onClick={() => selectBriefType(offer.type)}
+            className="group/cta inline-flex w-fit items-center gap-4 border border-[var(--lcd-fg)]/40 px-6 py-4 transition-colors hover:border-[var(--lcd-fg)] hover:bg-[var(--lcd-fg)] hover:text-[var(--lcd-bg)]"
+          >
+            <span className="text-hairline">{offer.cta}</span>
+            <ArrowRight className="h-3 w-3 transition-transform group-hover/cta:translate-x-1" />
+          </a>
+          <a
+            href={offer.page}
+            className="w-fit text-hairline text-[var(--lcd-dim)] underline underline-offset-4 hover:text-[var(--lcd-fg)]"
+          >
+            {offer.pageLabel} →
+          </a>
         </div>
-        <a
-          href="#contact"
-          onClick={() => selectBriefType(offer.type)}
-          className="group/cta inline-flex w-fit items-center gap-4 border border-[var(--lcd-fg)]/40 px-6 py-4 transition-colors hover:border-[var(--lcd-fg)] hover:bg-[var(--lcd-fg)] hover:text-[var(--lcd-bg)]"
-        >
-          <span className="text-hairline">{offer.cta}</span>
-          <ArrowRight className="h-3 w-3 transition-transform group-hover/cta:translate-x-1" />
-        </a>
-        <a
-          href={offer.page}
-          className="w-fit text-hairline text-[var(--lcd-dim)] underline underline-offset-4 hover:text-[var(--lcd-fg)]"
-        >
-          {offer.pageLabel} →
-        </a>
       </div>
     </motion.div>
   );
@@ -1372,7 +1302,11 @@ const STEPS = [
   { n: "01", t: "Découvrir", d: "Comprendre l'univers, l'audience et les enjeux du projet." },
   { n: "02", t: "Imaginer", d: "Conceptualiser des idées fortes et des mécaniques engageantes." },
   { n: "03", t: "Concevoir", d: "Designer des expériences belles, fluides, intuitives." },
-  { n: "04", t: "Développer", d: "Développer avec les meilleures technologies pour des performances optimales." },
+  {
+    n: "04",
+    t: "Développer",
+    d: "Développer avec les meilleures technologies pour des performances optimales.",
+  },
   { n: "05", t: "Lancer", d: "Déployer, orchestrer, mesurer l'onde de choc." },
   { n: "06", t: "Faire évoluer", d: "Ajuster et faire évoluer l'expérience dans le temps." },
 ];
@@ -1388,7 +1322,13 @@ function Approach() {
         <SectionHead
           index="04"
           eyebrow="Notre approche"
-          title={[<>Des idées.</>, <>Un processus.</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">Des émotions.</em>]}
+          title={[
+            <>Des idées.</>,
+            <>Un processus.</>,
+            <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">
+              Des émotions.
+            </em>,
+          ]}
         />
       </div>
 
@@ -1413,7 +1353,10 @@ function Step({ step, index }: { step: (typeof STEPS)[number]; index: number }) 
   const ref = useRef<HTMLLIElement>(null);
   const inView = useInView(ref, { once: true, margin: "-25%" });
   return (
-    <li ref={ref} className="relative grid grid-cols-[4rem_1fr] items-start gap-6 md:grid-cols-[8rem_1fr] md:gap-10">
+    <li
+      ref={ref}
+      className="relative grid grid-cols-[4rem_1fr] items-start gap-6 md:grid-cols-[8rem_1fr] md:gap-10"
+    >
       <div className="relative">
         <motion.div
           initial={{ scale: 0 }}
@@ -1489,25 +1432,29 @@ const CONCEPTS_FALLBACK = [
   {
     tag: "Nouveau concept",
     title: "Mission Impossible",
-    pitch: "Et si votre téléphone devenait votre mission ? Un appel mystérieux, une série d'énigmes, un compte à rebours.",
+    pitch:
+      "Et si votre téléphone devenait votre mission ? Un appel mystérieux, une série d'énigmes, un compte à rebours.",
     img: missionImg,
   },
   {
     tag: "Concept festival",
     title: "Festival de Cannes",
-    pitch: "Et si le Festival devenait une expérience digitale immersive, ouverte depuis n'importe quel salon dans le monde ?",
+    pitch:
+      "Et si le Festival devenait une expérience digitale immersive, ouverte depuis n'importe quel salon dans le monde ?",
     img: cannesImg,
   },
   {
     tag: "Concept sport",
     title: "Roland-Garros",
-    pitch: "Une expérience interactive pour suivre chaque échange, chaque coup droit, chaque silence de la terre battue.",
+    pitch:
+      "Une expérience interactive pour suivre chaque échange, chaque coup droit, chaque silence de la terre battue.",
     img: rolandImg,
   },
   {
     tag: "Concept live",
     title: "Tour de France",
-    pitch: "Une carte interactive, des défis, des classements. Le peloton en temps réel dans la poche des fans.",
+    pitch:
+      "Une carte interactive, des défis, des classements. Le peloton en temps réel dans la poche des fans.",
     img: tourImg,
   },
 ];
@@ -1523,7 +1470,10 @@ function ConceptLab({ featured = false }: { featured?: boolean } = {}) {
   }));
   if (items.length === 0 && !featured) return null;
   return (
-    <section id="concepts" className="relative overflow-hidden border-t border-[var(--lcd-line)] py-14 md:py-24">
+    <section
+      id="concepts"
+      className="relative overflow-hidden border-t border-[var(--lcd-line)] py-14 md:py-24"
+    >
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="marquee flex whitespace-nowrap opacity-[0.04]">
           {[0, 1].map((k) => (
@@ -1543,8 +1493,18 @@ function ConceptLab({ featured = false }: { featured?: boolean } = {}) {
           eyebrow={featured ? "En ce moment · Concept lab" : "Concept lab"}
           title={
             featured
-              ? [<>Les idées</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">en cours d'exploration.</em>]
-              : [<>Le laboratoire</>, <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">des idées à venir.</em>]
+              ? [
+                  <>Les idées</>,
+                  <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">
+                    en cours d'exploration.
+                  </em>,
+                ]
+              : [
+                  <>Le laboratoire</>,
+                  <em key="e" className="font-[var(--font-serif)] italic text-[var(--lcd-dim)]">
+                    des idées à venir.
+                  </em>,
+                ]
           }
         />
 
@@ -1561,7 +1521,7 @@ function ConceptLab({ featured = false }: { featured?: boolean } = {}) {
         )}
       </div>
       <ConceptModal
-        concept={activeIdx !== null ? items[activeIdx] ?? null : null}
+        concept={activeIdx !== null ? (items[activeIdx] ?? null) : null}
         onClose={() => setActiveIdx(null)}
       />
     </section>
@@ -1804,7 +1764,9 @@ function CaseRow({ c, index }: { c: CasePreview; index: number }) {
           </div>
         </div>
         <div className="hidden max-w-md text-sm italic text-[var(--lcd-dim)] md:block">
-          {c.tagline ? `« ${c.tagline.replace(/^[«"]\s*|\s*[»"]$/g, "")} »` : c.release_label ?? ""}
+          {c.tagline
+            ? `« ${c.tagline.replace(/^[«"]\s*|\s*[»"]$/g, "")} »`
+            : (c.release_label ?? "")}
         </div>
         <div className="flex items-center gap-3 text-hairline text-[var(--lcd-dim)] transition-colors group-hover:text-[var(--lcd-fg)]">
           <span className="hidden md:inline">lire l'étude</span>
@@ -1820,12 +1782,12 @@ function CaseRow({ c, index }: { c: CasePreview; index: number }) {
   );
 }
 
-
 /* ------------------------------- Pull quote ------------------------------- */
 
 function PullQuote() {
   const ref = useRef<HTMLDivElement>(null);
-  const words = "Nous ne créons pas des sites. Nous créons des expériences dont on se souvient.".split(" ");
+  const words =
+    "Nous ne créons pas des sites. Nous créons des expériences dont on se souvient.".split(" ");
   const inView = useInView(ref, { once: true, margin: "-20%" });
   return (
     <section ref={ref} className="relative py-16 md:py-28">
@@ -1861,12 +1823,7 @@ function FinalCTA() {
   return (
     <section id="contact" ref={ref} className="relative isolate overflow-hidden">
       <motion.div style={{ y }} className="absolute inset-0 z-0">
-        <img
-          src={ctaImg}
-          alt=""
-          loading="lazy"
-          className="h-full w-full object-cover"
-        />
+        <img src={ctaImg} alt="" loading="lazy" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-black/70" />
       </motion.div>
 
@@ -1947,15 +1904,11 @@ function Footer({
             className="h-auto w-40 md:w-52"
           />
           <p className="mt-6 text-sm text-[var(--lcd-dim)]">
-            Studio digital spécialisé dans les sites de sortie de films et les sites
-            d'artistes.
+            Studio digital spécialisé dans les sites de sortie de films et les sites d'artistes.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-10 md:grid-cols-4">
-          <FooterCol
-            title="Studio"
-            links={studioLinks}
-          />
+          <FooterCol title="Studio" links={studioLinks} />
           <FooterCol
             title="Expertises"
             links={LANDINGS.map((l) => ({ label: l.navLabel, href: l.path }))}
@@ -1964,7 +1917,10 @@ function Footer({
             title="Suivez-nous"
             links={[
               { label: "Instagram", href: "https://www.instagram.com/lcd_studio_digital" },
-              { label: "Facebook", href: "https://www.facebook.com/people/Le-Connecteur-Digital/61566337440874/" },
+              {
+                label: "Facebook",
+                href: "https://www.facebook.com/people/Le-Connecteur-Digital/61566337440874/",
+              },
             ]}
           />
           <FooterCol
@@ -1982,7 +1938,9 @@ function Footer({
         <span>© 2026 LCD — Tous droits réservés.</span>
         <span className="flex items-center gap-4">
           Made with intent
-          <a href="/admin" className="hover:text-[var(--lcd-fg)]">Admin</a>
+          <a href="/admin" className="hover:text-[var(--lcd-fg)]">
+            Admin
+          </a>
         </span>
       </div>
     </footer>
@@ -2072,14 +2030,28 @@ function PlayIcon({ className = "" }: { className?: string }) {
 }
 function ArrowDown({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 12 12" className={className} fill="none" stroke="currentColor" strokeWidth="1" aria-hidden>
+    <svg
+      viewBox="0 0 12 12"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1"
+      aria-hidden
+    >
       <path d="M6 1v10M2 7l4 4 4-4" />
     </svg>
   );
 }
 function ArrowRight({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 12 12" className={className} fill="none" stroke="currentColor" strokeWidth="1" aria-hidden>
+    <svg
+      viewBox="0 0 12 12"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1"
+      aria-hidden
+    >
       <path d="M1 6h10M7 2l4 4-4 4" />
     </svg>
   );
