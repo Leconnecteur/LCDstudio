@@ -372,17 +372,17 @@ function MobileBar({ hidden = false }: { hidden?: boolean }) {
       initial={false}
       animate={{ y: show ? 0 : 120, opacity: show ? 1 : 0 }}
       transition={{ duration: 0.6, ease: EASE }}
-      className={`fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-full border border-[var(--lcd-fg)]/15 bg-[var(--lcd-bg)]/85 px-2 py-2 pl-5 backdrop-blur md:hidden ${
+      className={`fixed inset-x-4 bottom-4 z-30 flex items-center justify-between gap-3 rounded-full border border-[var(--lcd-fg)]/15 bg-[var(--lcd-bg)]/85 py-2 pl-5 pr-2 backdrop-blur md:hidden ${
         show ? "pointer-events-auto" : "pointer-events-none"
       }`}
     >
-      <span className="text-hairline text-[var(--lcd-dim)]">
-        <span className="mr-2 inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full bg-[var(--lcd-accent)] align-middle" />
-        Un projet en tête ?
+      <span className="whitespace-nowrap text-hairline text-[var(--lcd-dim)]">
+        <span className="mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-[var(--lcd-accent)] align-middle" />
+        Un projet ?
       </span>
       <a
         href="#contact"
-        className="inline-flex items-center gap-2 rounded-full bg-[var(--lcd-fg)] px-4 py-2 text-hairline text-[var(--lcd-bg)]"
+        className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-[var(--lcd-fg)] px-4 py-2 text-hairline text-[var(--lcd-bg)]"
       >
         Nous écrire
         <ArrowRight className="h-3 w-3" />
